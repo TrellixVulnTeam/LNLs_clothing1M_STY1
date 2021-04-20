@@ -7,7 +7,7 @@ from mean_teacher import losses
 from train_utils import get_current_consistency_weight
 from train_utils import update_ema_variables
 from utils import progress_bar
-from lr_sceduler import cyclic_cosine_lr, cosine, lr_fastswa
+from lr_sceduler import lr_cosineannealing, lr_fastswa
 from sklearn.mixture import GaussianMixture
 
 class Supervised():
@@ -46,10 +46,8 @@ class Supervised():
 
             if self.lr_schedule == 'fastswa':
                 lr_fastswa(self.optimizer, epoch, batch_idx, len(trainloader))
-            elif self.lr_schedule == 'cyclic_cosine_lr':
-                cyclic_cosine_lr(self.optimizer, epoch, batch_idx, len(trainloader))
             elif self.lr_schedule == 'cosineannealing':
-                cosine(self.optimizer, epoch, batch_idx, len(trainloader))
+                lr_cosineannealing(self.optimizer, epoch, batch_idx, len(trainloader))
 
             inputs1, targets = inputs1.cuda(), targets.cuda()
             outputs = self.model(inputs1)
@@ -185,10 +183,8 @@ class MeanTeacher():
 
             if self.lr_schedule == 'fastswa':
                 lr_fastswa(self.optimizer, epoch, batch_idx, len(trainloader))
-            elif self.lr_schedule == 'cyclic_cosine_lr':
-                cyclic_cosine_lr(self.optimizer, epoch, batch_idx, len(trainloader))
             elif self.lr_schedule == 'cosineannealing':
-                cosine(self.optimizer, epoch, batch_idx, len(trainloader))
+                lr_cosineannealing(self.optimizer, epoch, batch_idx, len(trainloader))
 
             inputs, ema_inputs, targets = inputs.cuda(), ema_inputs.cuda(), targets.cuda()
             outputs = self.model(inputs)
