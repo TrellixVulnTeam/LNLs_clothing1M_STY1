@@ -14,7 +14,7 @@ def cyclic_cosine_lr(optimizer, epoch, i, len_loader): # more than 1 cycle
         param_group['lr'] = lr
 
 
-def cosineannealing(optimizer, epoch, i, len_loader): # 1 cycle
+def cosine(optimizer, epoch, i, len_loader): # 1 cycle
     # lr = args.lr
     epoch = epoch + i / len_loader
     assert args.lr_schedule == 'cosineannealing'
@@ -23,6 +23,19 @@ def cosineannealing(optimizer, epoch, i, len_loader): # 1 cycle
 
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
+
+
+def cosineannealing(optimizer, epoch, i, len_loader): # multi cycles
+    # lr = args.lr
+    epoch = epoch + i / len_loader
+    epoch = epoch % args.interval
+    assert args.lr_schedule == 'cosineannealing'
+    assert epoch <= args.interval
+    lr = ramps.cosine_rampdown_modified(epoch, args.interval)
+
+    for param_group in optimizer.param_groups:
+        param_group['lr'] = lr
+
 
 def lr_fastswa(optimizer, epoch,  # modified for fastSWA
                                  step_in_epoch, total_steps_in_epoch):

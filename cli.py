@@ -50,7 +50,7 @@ parser.add_argument('--lr-min', default=0.01, type=float, help='min learning rat
 parser.add_argument('--lr-rampup', default=0, type=int, help='length of learning rate rampup in the beginning')
 parser.add_argument('--lr-rampdown-epochs', default=350, type=int,
                     help='length of learning rate cosine rampdown (>= length of training)')
-parser.add_argument('--lr-schedule', default='cyclic_cosine_lr', type=str, help='lr scheduling type', choices=['cyclic_cosine_lr', 'cosineannealing', 'fastswa'])
+parser.add_argument('--lr-schedule', default='cyclic_cosine_lr', type=str, help='lr scheduling type', choices=['cyclic_cosine_lr', 'cosine','cosineannealing', 'fastswa'])
 parser.add_argument('--interval', default=50, type=int, help='half interval of cosine')
 parser.add_argument('--cycles', default=5, type=int, help='num of cycles of cyclic lr, used when lr_schedule == cycliclr or cosineannealingwarmrestarts')
 parser.add_argument('--max-epoch', default=300, type=int, help='total epoch')
