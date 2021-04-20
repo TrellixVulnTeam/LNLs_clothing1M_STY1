@@ -62,8 +62,8 @@ def get_current_consistency_weight(epoch):
     return args.consistency * ramps.sigmoid_rampup(epoch,
                                                    args.consistency_rampup)
 
-def adjust_learning_rate_fastswa(optimizer, epoch,  # modified for fastSWA
-                                 step_in_epoch, total_steps_in_epoch):
+def lr_fastswa(optimizer, epoch,  # modified for fastSWA
+               step_in_epoch, total_steps_in_epoch):
     lr = args.lr # max lr ( initial lr )
     epoch = epoch + step_in_epoch / total_steps_in_epoch
 

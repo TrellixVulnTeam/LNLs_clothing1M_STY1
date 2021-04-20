@@ -5,7 +5,8 @@ ramp length in the same format, and returns a multiplier between
 0 and 1.
 """
 import numpy as np
-
+import cli
+args = cli.args
 
 
 def sigmoid_rampup(current, rampup_length):
@@ -31,3 +32,8 @@ def cosine_rampdown(current, rampdown_length):
     """Cosine rampdown from https://arxiv.org/abs/1608.03983"""
     assert 0 <= current <= rampdown_length
     return float(.5 * (np.cos(np.pi * current / rampdown_length) + 1))
+
+def cosine_rampdown_modified(current, rampdown_length):
+    """Cosine rampdown from https://arxiv.org/abs/1608.03983"""
+    # assert 0 <= current <= rampdown_length
+    return args.lr + float(.5 * (args.lr - args.lr_min)* (np.cos(np.pi * current / rampdown_length) + 1))

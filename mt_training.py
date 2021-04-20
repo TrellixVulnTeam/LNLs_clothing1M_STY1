@@ -7,7 +7,7 @@ from mean_teacher import losses
 from train_utils import get_current_consistency_weight
 from train_utils import update_ema_variables
 from utils import progress_bar
-from train_utils import adjust_learning_rate_fastswa
+from lr_sceduler import cyclic_cosine_lr, cosineannealing, lr_fastswa
 from sklearn.mixture import GaussianMixture
 
 class Supervised():
@@ -19,6 +19,8 @@ class Supervised():
         self.batch_size = args.batch_size
         self.logit_distance_cost = args.logit_distance_cost
         self.max_total_epochs = args.max_total_epochs
+
+        self.lr_schedule = args.lr_schedule
 
         self.best_acc = 0
         self.global_step = 0
@@ -42,7 +44,13 @@ class Supervised():
 
         for batch_idx, ((inputs1, _), targets) in enumerate(trainloader):
 
-            # adjust_learning_rate(self.optimizer, epoch, batch_idx, len(trainloader)) # used in MT
+            if self.lr_schedule == 'fastswa':
+                lr_fastswa(self.optimizer, epoch, batch_idx, len(trainloader))
+            elif self.lr_schedule == 'cyclic_cosine_lr':
+                cyclic_cosine_lr(self.optimizer, epoch, batch_idx, len(trainloader))
+            elif self.lr_schedule == 'cosineannealing':
+                cosineannealing(self.optimizer, epoch, batch_idx, len(trainloader))
+
             inputs1, targets = inputs1.cuda(), targets.cuda()
             outputs = self.model(inputs1)
 
@@ -81,7 +89,6 @@ class Supervised():
                             100. * correct / total, correct, total,
                             self.optimizer.param_groups[-1]['lr']))
 
-        self.lr_scheduler.step()
         loss = {'loss': running_loss / (batch_idx + 1),
                 'class_loss': running_class_loss / (batch_idx + 1),
                 'res_loss': running_res_loss / (batch_idx + 1)}
@@ -146,6 +153,7 @@ class MeanTeacher():
         self.logit_distance_cost = args.logit_distance_cost
         self.consistency_type = args.consistency_type
         self.ema_decay = args.ema_decay
+        self.lr_schedule = args.lr_schedule
         # self.max_total_epochs = args.max_total_epochs
         # self.max_epochs_per_filtering = args.max_epochs_per_filtering
 
@@ -175,7 +183,13 @@ class MeanTeacher():
 
         for batch_idx, ((inputs, ema_inputs), targets) in enumerate(trainloader):
 
-            adjust_learning_rate_fastswa(self.optimizer, epoch, batch_idx, len(trainloader))
+            if self.lr_schedule == 'fastswa':
+                lr_fastswa(self.optimizer, epoch, batch_idx, len(trainloader))
+            elif self.lr_schedule == 'cyclic_cosine_lr':
+                cyclic_cosine_lr(self.optimizer, epoch, batch_idx, len(trainloader))
+            elif self.lr_schedule == 'cosineannealing':
+                cosineannealing(self.optimizer, epoch, batch_idx, len(trainloader))
+
             inputs, ema_inputs, targets = inputs.cuda(), ema_inputs.cuda(), targets.cuda()
             outputs = self.model(inputs)
             ema_outputs = self.ema_model(ema_inputs)
