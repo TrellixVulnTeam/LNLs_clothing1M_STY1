@@ -30,6 +30,8 @@ parser.add_argument('-e', '--evaluate', action='store_true', help='evaluate mode
 parser.add_argument('--pretrained', dest='pretrained', action='store_true', help='use pre-trained model')
 parser.add_argument('--email', action='store_true', help='send email when training is finished')
 parser.add_argument('--final-run', action='store_true', help='train without validation set')
+parser.add_argument('--patience', default=30, type=int, help='patience for early stopping')
+
 
 # parser.add_argument('--sigua-weight', default=0.001, type=float, help='weight of sigua loss')
 # parser.add_argument('--filtering-type', default='small-loss', type=str,
@@ -48,8 +50,8 @@ parser.add_argument('--lr-min', default=0.01, type=float, help='min learning rat
 parser.add_argument('--lr-rampup', default=0, type=int, help='length of learning rate rampup in the beginning')
 parser.add_argument('--lr-rampdown-epochs', default=350, type=int,
                     help='length of learning rate cosine rampdown (>= length of training)')
-parser.add_argument('--lr-schedule', default='cycliclr', type=str, help='lr scheduling type', choices=['cycliclr', 'cosineannealing', 'cosineannealingwarmrestarts'])
-# parser.add_argument('--interval', default=300, type=int, help='interval of cosineannealing')
+parser.add_argument('--lr-schedule', default='cyclic_cosine_lr', type=str, help='lr scheduling type', choices=['cyclic_cosine_lr', 'cosineannealing', 'fastswa'])
+parser.add_argument('--interval', default=50, type=int, help='half interval of cosine')
 parser.add_argument('--cycles', default=5, type=int, help='num of cycles of cyclic lr, used when lr_schedule == cycliclr or cosineannealingwarmrestarts')
 parser.add_argument('--max-epoch', default=300, type=int, help='total epoch')
 
@@ -62,7 +64,6 @@ parser.add_argument('--num-cycles', default=5, type=int, help='additional cycles
 parser.add_argument('--cycle-interval', default=30, type=int, help='the number of epochs for small cyclical learning rate')
 parser.add_argument('--cycle-rampdown-epochs', default=210, type=int, help='Half wavelength for the cosine annealing curve period(notation \'l_0\' in paper)')
 # parser.add_argument('--max-epochs-per-filtering', default=300, type=int, help='max epochs for each filtering iteration')
-parser.add_argument('--patience', default=30, type=int, help='patience for early stopping')
 parser.add_argument('--fastswa-frequencies', default='3', type=str, help='Average SWA every x epochs, even when on cycles')
 
 # MT

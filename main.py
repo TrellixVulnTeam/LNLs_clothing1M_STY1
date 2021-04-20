@@ -176,14 +176,22 @@ mt = MeanTeacher(model, ema_model, optimizer, args)
 swa = Supervised(swa_model, optimizer, args) # no training
 fastswa = Supervised(fastswa_nets[0], optimizer, args) # no training
 num_snapshot = 0
-for epoch in range(args.start_epoch, args.epochs + args.num_cycles * args.cycle_interval + 1):
 
-    print('\nEpoch: %d/%d'%(epoch+1, args.epochs + args.num_cycles * args.cycle_interval))
-    if epoch < args.epochs:
-        print('In first cycle')
-    else:
-        cycle = int((epoch - args.epochs) // args.cycle_interval + 2)
-        print('In %d -th cycle' %cycle)
+if args.lr_schedule == 'fastswa':
+    max_epoch = args.epochs + args.num_cycles * args.cycle_interval + 1
+elif args.lr_schedule == 'cyclic_cosine_lr':
+    max_epoch = 2 * args.interval * args.cycles
+elif args.lr_schedule == 'cosineannealing':
+    max_epoch = args.interval
+
+for epoch in range(args.start_epoch, max_epoch):
+
+    # print('\nEpoch: %d/%d'%(epoch+1, args.epochs + args.num_cycles * args.cycle_interval))
+    # if epoch < args.epochs:
+    #     print('In first cycle')
+    # else:
+    #     cycle = int((epoch - args.epochs) // args.cycle_interval + 2)
+    #     print('In %d -th cycle' %cycle)
 
     # do the fastSWA updates
     if args.fastswa_frequencies is not None:
