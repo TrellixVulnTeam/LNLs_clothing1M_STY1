@@ -1,16 +1,17 @@
-python3 main_.py\
+python3 main.py\
+    --val-size 5000\
     --dataset cifar10\
     --noise-type symmetric\
     --noise-ratio 0.4\
     --batch-size 128\
     --labeled-batch-size 31\
+    --lr-type 'fastswa'\
     --lr 0.05\
     --lr-min 0.0\
     --decay 2e-4\
     --ema-decay 0.97\
-    --val-size 5000\
-    --epochs 180\
+    --first-interval 180\
+    --interval 30\
     --cycle-rampdown-epochs 210\
-    --num-cycles 5\
-    --cycle-interval 30\
+    --cycles 5\
     --fastswa-frequencies '3'

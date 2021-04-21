@@ -17,7 +17,7 @@ import datasets
 from mean_teacher import data, losses
 from utils import send_email
 from noise import generate_noise
-import cli_warmup
+import cli
 from train_utils import save_checkpoint, create_model
 from warmup_trainer import Supervised, Filter
 import architectures
@@ -32,7 +32,7 @@ p = Path(__file__).absolute()
 PATH = p.parents[0]
 os.chdir(PATH)
 
-args = cli_warmup.args
+args = cli.args
 use_cuda = torch.cuda.is_available()
 CUDA_VISIBLE_DEVICES=0
 

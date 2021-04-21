@@ -1,0 +1,12 @@
+python3 warmup_analyze.py\
+    --val-size 5000\
+    --dataset cifar100\
+    --noise-type symmetric\
+    --noise-ratio 0.4\
+    --decay 2e-4\
+    --ema-decay 0.97\
+    --lr-type 'cosineannealing'\
+    --lr 0.05\
+    --lr-min 0.0\
+    --interval 20\
+    --cycles 5\

@@ -62,17 +62,17 @@ def get_current_consistency_weight(epoch):
     return args.consistency * ramps.sigmoid_rampup(epoch,
                                                    args.consistency_rampup)
 
-def lr_fastswa(optimizer, epoch,  # for fastSWA
-               step_in_epoch, total_steps_in_epoch):
-    # lr = args.lr # max lr ( initial lr )
+def lr_fastswa(optimizer, epoch, step_in_epoch, total_steps_in_epoch):
+
+    lr = args.lr # max lr ( initial lr )
     epoch = epoch + step_in_epoch / total_steps_in_epoch
 
     if args.cycle_rampdown_epochs:
-        assert args.cycle_rampdown_epochs >= args.epochs
-        if epoch <= args.epochs:
+        assert args.cycle_rampdown_epochs >= args.first_interval
+        if epoch <= args.first_interval:
             lr = ramps.cosine_rampdown(epoch, args.cycle_rampdown_epochs)
         else:
-            epoch_ = (args.epochs - args.cycle_interval) + ((epoch - args.epochs) % args.cycle_interval)
+            epoch_ = (args.first_interval - args.interval) + ((epoch - args.first_interval) % args.interval)
             lr = ramps.cosine_rampdown(epoch_, args.cycle_rampdown_epochs)
 
     for param_group in optimizer.param_groups:
