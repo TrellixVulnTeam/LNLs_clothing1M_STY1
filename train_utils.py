@@ -62,64 +62,35 @@ def get_current_consistency_weight(epoch):
     return args.consistency * ramps.sigmoid_rampup(epoch,
                                                    args.consistency_rampup)
 
-def lr_fastswa(optimizer, epoch,  # modified for fastSWA
+def lr_fastswa(optimizer, epoch,  # for fastSWA
                step_in_epoch, total_steps_in_epoch):
-    lr = args.lr # max lr ( initial lr )
+    # lr = args.lr # max lr ( initial lr )
     epoch = epoch + step_in_epoch / total_steps_in_epoch
 
-    # LR warm-up to handle large minibatch sizes from
-    # https://arxiv.org/abs/1706.02677
-    # lr = ramps.linear_rampup(epoch, args.lr_rampup) * (args.lr - args.initial_lr) + args.initial_lr # no rampup when doing fastSWA
-
-    # Cosine LR rampdown from
-    # https://arxiv.org/abs/1608.03983 (but one cycle only)
     if args.cycle_rampdown_epochs:
         assert args.cycle_rampdown_epochs >= args.epochs
         if epoch <= args.epochs:
-            lr *= ramps.cosine_rampdown(epoch, args.cycle_rampdown_epochs)
+            lr = ramps.cosine_rampdown(epoch, args.cycle_rampdown_epochs)
         else:
             epoch_ = (args.epochs - args.cycle_interval) + ((epoch - args.epochs) % args.cycle_interval)
-            lr *= ramps.cosine_rampdown(epoch_, args.cycle_rampdown_epochs)
+            lr = ramps.cosine_rampdown(epoch_, args.cycle_rampdown_epochs)
+
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
 
-def adjust_learning_rate_cosineannealing(optimizer, epoch,  # cosineannealing (variable : half interval (args.interval) )
-                                         step_in_epoch, total_steps_in_epoch):
-    lr = args.lr
+
+def lr_cosineannealing(optimizer, epoch,  # cosineannealing (args.interval : half interval of cosine)
+                       step_in_epoch, total_steps_in_epoch):
+
     epoch = epoch + step_in_epoch / total_steps_in_epoch
-
-    # LR warm-up to handle large minibatch sizes from
-    # https://arxiv.org/abs/1706.02677
-    # lr = ramps.linear_rampup(epoch, args.lr_rampup) * (args.lr - args.initial_lr) + args.initial_lr
-
-    # Cosine LR rampdown from
-    # https://arxiv.org/abs/1608.03983 (but one cycle only)
-    if args.interval:
-        # assert args.lr_rampdown_epochs >= args.max_epochs_per_filtering
-        lr *= ramps.cosine_rampdown(epoch, args.interval)
-
-    for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
-
-def adjust_learning_rate(optimizer, epoch, # original code
-                         step_in_epoch, total_steps_in_epoch):
-    lr = args.lr
-    epoch = epoch + step_in_epoch / total_steps_in_epoch
-
-    # LR warm-up to handle large minibatch sizes from
-    # https://arxiv.org/abs/1706.02677
-    lr = ramps.linear_rampup(epoch, args.lr_rampup) * (args.lr - args.initial_lr) + args.initial_lr
-
-    # Cosine LR rampdown from
-    # https://arxiv.org/abs/1608.03983 (but one cycle only)
-    if args.lr_rampdown_epochs:
-        assert args.lr_rampdown_epochs >= args.max_epochs_per_filtering
-        lr *= ramps.cosine_rampdown(epoch, args.lr_rampdown_epochs)
+    epoch = epoch % args.interval
+    lr = ramps.cosine_rampdown(epoch, args.interval)
 
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
 
 
+# update teacher model
 def update_ema_variables(model, ema_model, alpha, global_step):
     alpha = min(1 - 1 / (global_step + 1), alpha)
     for ema_param, param in zip(ema_model.parameters(), model.parameters()):
@@ -138,6 +109,9 @@ def create_model(ema=False):
 
     return model
 
+'''
+update code from SWA paper
+'''
 def moving_average(swa_model, model, alpha=1.0):
     for param1, param2 in zip(swa_model.parameters(), model.parameters()):
         param1.data *= (1.0 - alpha)
@@ -202,7 +176,9 @@ def bn_update(loader, model):
 
     model.apply(lambda module: _set_momenta(module, momenta))
 
-
+'''
+update code from fastSWA paper
+'''
 def update_batchnorm(model, train_loader):
     model.train()
     for i, (inputs, targets) in enumerate(train_loader):
@@ -217,6 +193,7 @@ def update_batchnorm(model, train_loader):
         model_out = model(input_var)
 
 
+# trainloader filtering module
 def dataloader_filtering(filtered_trainloader, labeled_idxs, unlabeled_idxs, args):
 
     batch_sampler = data2.TwoStreamBatchSampler(unlabeled_idxs,

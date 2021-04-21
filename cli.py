@@ -5,7 +5,6 @@ parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
 parser.add_argument('--num-classes', default=None, type=int, help='number of classes')
 parser.add_argument('--dataset', default='cifar10', choices=['cifar10', 'cifar100', 'clothes1M', 'webvision'], help='choose dataset')
 parser.add_argument('--val-size', default=5000, type=int, help='size of validation set')
-# parser.add_argument('--resume', '-r', default=False, help='resume from checkpoint')
 parser.add_argument('--arch', default="cifar_shakeshake26", type=str, help='model architecture')
 parser.add_argument('--seed', default=1, type=int, help='random seed')
 parser.add_argument('-j', '--workers', default=4, type=int, help='number of data loading workers (default: 4)')
@@ -16,28 +15,28 @@ parser.add_argument('--ema-decay', default=0.97, type=float, help='ema variable 
 parser.add_argument('--logit-distance-cost', default=.01, type=float,
                     help='let the student model have two outputs and use an MSE loss between the logits with\
                      the given weight (default: only have one output)')
-parser.add_argument('--start-epoch', default=0, type=int, help='start epoch')
+parser.add_argument('-e', '--evaluate', action='store_true', help='evaluate model on test set')
+parser.add_argument('--pretrained', dest='pretrained', action='store_true', help='use pre-trained model')
+parser.add_argument('--final-run', action='store_true', help='train without validation set')
+
 
 # noise
 parser.add_argument('--noise-type', default='symmetric', choices=['symmetric', 'asymmetric'], help='type of noise')
 parser.add_argument('--noise-ratio', default=0.4, type=float, help='ratio of noise')
 parser.add_argument('--noisy-validation', default=True, type=bool, help='clean validation or noisy validation set')
 
-# lr schedule
-parser.add_argument('--lr-schedule', default='cosineannealing', type=str, help='lr scheduling type', choices=['cosineannealing', 'fastswa'])
-parser.add_argument('--lr', default=0.05, type=float, help='max learning rate')
-parser.add_argument('--initial-lr', default=0.0, type=float, help='initial learning rate when using linear rampup')
-parser.add_argument('--lr-min', default=0.01, type=float, help='min learning rate')
-parser.add_argument('--lr-rampup', default=0, type=int, help='length of learning rate rampup in the beginning')
-parser.add_argument('--interval', default=50, type=int, help='half interval of cosine')
-parser.add_argument('--cycles', default=5, type=int, help='num of cycles of cyclic lr')
 
-# (fast)SWA (swa type, epoch, ...)
+# (fast)SWA (swa type, epoch, ...) (재순이형 참고)
+parser.add_argument('--lr', default=0.05, type=float, help='max learning rate')
+parser.add_argument('--lr-min', default=0.001, type=float, help='min learning rate')
+parser.add_argument('--initial-lr', default=0.0, type=float, help='initial learning rate when using linear rampup')
+parser.add_argument('--start-epoch', default=0, type=int, help='start epoch')
 parser.add_argument('--epochs', default=180, type=int, help='number of total epochs to run(notation \'l\' in paper)')
-parser.add_argument('--num-cycles', default=5, type=int, help='additional cycles after args.epochs')
-parser.add_argument('--cycle-interval', default=30, type=int, help='the number of epochs for small cyclic learning rate')
 parser.add_argument('--cycle-rampdown-epochs', default=210, type=int, help='Half wavelength for the cosine annealing curve period(notation \'l_0\' in paper)')
+parser.add_argument('--num-cycles', default=5, type=int, help='additional cycles after args.epochs')
+parser.add_argument('--cycle-interval', default=30, type=int, help='the number of epochs for small cyclical learning rate')
 parser.add_argument('--fastswa-frequencies', default='3', type=str, help='Average SWA every x epochs, even when on cycles')
+
 
 # MT
 parser.add_argument('--consistency', default=100.0, type=float,
@@ -45,6 +44,7 @@ parser.add_argument('--consistency', default=100.0, type=float,
 parser.add_argument('--consistency-type', default="mse", type=str, choices=['mse', 'kl'],
                     help='consistency loss type to use')
 parser.add_argument('--consistency-rampup', default=5, type=int, help='length of the consistency loss ramp-up')
+
 
 # filtering
 parser.add_argument('--exclude-unlabeled', default=False, type=bool,
