@@ -31,18 +31,14 @@ parser.add_argument('--lr', default=0.05, type=float, help='max learning rate')
 parser.add_argument('--lr-min', default=0.0, type=float, help='min learning rate')
 parser.add_argument('--initial-lr', default=0.0, type=float, help='initial learning rate when using linear rampup')
 
-# lr cosineannealing (준호 참고)
-parser.add_argument('--interval', default=10, type=int, help='interval of a cycle')
-parser.add_argument('--cycles', default=5, type=int, help='num of cycles')
+parser.add_argument('--interval', default=10, type=int, help='1) cosineannealing : interval of a cycle 2) fastswa : interval of repeated cycles ')
+parser.add_argument('--cycles', default=5, type=int, help='num of cycles repeated')
 
-# (fast)SWA (swa type, epoch, ...) (재순이형 참고)
+# (fast)SWA (swa type, epoch, ...)
 parser.add_argument('--start-epoch', default=0, type=int, help='start epoch')
-parser.add_argument('--first-interval', default=180, type=int, help='number of total epochs to run(notation \'l\' in paper)')
+parser.add_argument('--first-interval', default=180, type=int, help='first cycle interval(notation \'l\' in paper)')
 parser.add_argument('--cycle-rampdown-epochs', default=210, type=int, help='Half wavelength for the cosine annealing curve period(notation \'l_0\' in paper)')
-parser.add_argument('--interval', default=30, type=int, help='the number of epochs for small cyclical learning rate')
-parser.add_argument('--cycles', default=5, type=int, help='additional cycles after args.epochs')
 parser.add_argument('--fastswa-frequencies', default='3', type=str, help='Average SWA every x epochs, even when on cycles')
-
 
 # MT
 parser.add_argument('--consistency', default=100.0, type=float,

@@ -119,7 +119,7 @@ if args.fastswa_frequencies is not None:
 name_exp = '_'.join([args.arch, args.dataset, args.noise_type,
                     str(args.noise_ratio), 'lr', str(args.lr),
                     'ema_decay', str(args.ema_decay), 'seed', str(args.seed),
-                     args.filtering_type, 'epochs', str(args.epochs), 'interval', str(args.cycle_interval), str(random_number)])
+                     args.filtering_type, 'epochs', str(args.first_interval), 'interval', str(args.interval), str(random_number)])
 
 os.makedirs('./results/checkpoint', exist_ok=True)
 os.makedirs('./results/log', exist_ok=True)
@@ -172,20 +172,19 @@ num_snapshot = 0
 
 
 # start training
-for epoch in range(args.start_epoch, args.epochs + args.num_cycles * args.cycle_interval +1):
+for epoch in range(args.start_epoch, args.first_interval + args.cycles * args.interval +1):
 
-    # print('\nEpoch: %d/%d'%(epoch+1, args.epochs + args.num_cycles * args.cycle_interval))
-    if epoch < args.epochs:
+    if epoch < args.first_interval:
         print('In first cycle')
     else:
-        cycle = int((epoch - args.epochs) // args.cycle_interval + 2)
+        cycle = int((epoch - args.first_interval) // args.interval + 2)
         print('In %d -th cycle' %cycle)
 
     # do the fastSWA updates
     if args.fastswa_frequencies is not None:
         for fastswa_freq, fastswa_net, fastswa_opt in zip(fastswa_freqs, fastswa_nets, fastswa_optims,):
-            if epoch >= (args.epochs - args.cycle_interval) and (
-                    epoch - args.epochs + args.cycle_interval) % fastswa_freq == 0:
+            if epoch >= (args.first_interval - args.interval) and (
+                    epoch - args.first_interval + args.interval) % fastswa_freq == 0:
                 save_checkpoint(epoch, model, ema_model, swa_model, fastswa_nets[0], accuracy, args, path_checkpoint)
                 print("Evaluate fast-swa-{} at epoch {}".format(fastswa_freq, epoch))
                 fastswa_opt.update(model)
@@ -196,7 +195,7 @@ for epoch in range(args.start_epoch, args.epochs + args.num_cycles * args.cycle_
                 accuracy['test_fastswa_acc'].append(None)
 
     # swa update
-    if ((epoch >= args.epochs)) and ((epoch - args.epochs) % args.cycle_interval) == 0:
+    if ((epoch >= args.first_interval)) and ((epoch - args.first_interval) % args.interval) == 0:
         swa_model_optim.update(model)
         print("SWA Model Updated!")
         update_batchnorm(swa_model, trainloader)
@@ -207,7 +206,7 @@ for epoch in range(args.start_epoch, args.epochs + args.num_cycles * args.cycle_
         accuracy['test_swa_acc'].append(None)
 
     # filtering step
-    if args.epochs is not None and ((epoch >= args.epochs)) and ((epoch - args.epochs) % args.cycle_interval) == 0: # when new cycle start ( now model is the last model of previous cycle )
+    if args.first_interval is not None and ((epoch >= args.first_interval)) and ((epoch - args.first_interval) % args.interval) == 0: # when new cycle start ( now model is the last model of previous cycle )
         print('Filtering..')
         f.labeled_idxs_history = labeled_idxs_history
         if args.filtering_type == 'snapshot_preds_ensemble':
@@ -226,7 +225,7 @@ for epoch in range(args.start_epoch, args.epochs + args.num_cycles * args.cycle_
         print('Filtering Completed! The present dataset\'s Precision: %.3f Recall: %.3f' % (precision, recall))
         print('Labeled: %d\tUnlabeled: %d' % (len(labeled_idxs_history), len(unlabeled_idxs)))
 
-    if epoch == args.epochs + args.num_cycles * args.cycle_interval: # total last epoch
+    if epoch == args.first_interval + args.cycles * args.interval: # total last epoch
         test_acc, test_ema_acc = mt.test(testloader)
         swa_acc = swa.test(testloader)
         fastswa_acc = fastswa.test(testloader)
