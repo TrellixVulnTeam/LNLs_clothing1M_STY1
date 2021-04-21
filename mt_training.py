@@ -15,7 +15,7 @@ class Supervised():
         # train configuration
         self.batch_size = args.batch_size
         self.logit_distance_cost = args.logit_distance_cost
-        self.total_epochs = args.epochs + args.num_cycles * args.cycle_interval
+        self.total_epochs = args.first_interval + args.cycles * args.interval
 
         self.global_step = 0
 
@@ -141,7 +141,7 @@ class MeanTeacher():
         self.logit_distance_cost = args.logit_distance_cost
         self.consistency_type = args.consistency_type
         self.ema_decay = args.ema_decay
-        self.total_epochs = args.epochs + args.num_cycles * args.cycle_interval
+        self.total_epochs = args.first_interval + args.cycles * args.interval
 
         self.args = args
         self.global_step = 0
