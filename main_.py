@@ -144,6 +144,7 @@ with open(path_log, 'w') as logfile:
                         'valid student loss', 'valid student acc',
                         'valid teacher loss', 'valid teacher acc',
                         'test student acc', 'test teacher acc', 'test swa acc', 'test fastswa acc'])
+
 accuracy = {'train_acc': [],
             'train_clean_acc': [],
             'train_noisy_acc': [],
@@ -159,25 +160,21 @@ accuracy = {'train_acc': [],
 # filtering module
 f = Filter(trainloader, analysis_dict['clean_labels'], analysis_dict['noisy_labels'], args)
 
-
-labeled_idxs_history = np.array([], dtype=int)
-rate_of_labeled = 100.
-precision = 100. * (1-args.noise_ratio)
+labeled_idxs_history = np.array([], dtype=int) # stack labeled samples' idxs (Full => Inintial labeled idxs(l1) => l1 + l2 => l1 + l2 + l3 => ...)
+rate_of_labeled = 100. # start with full labeled dataset
+precision = 100. * (1-args.noise_ratio) # precision of full labeled dataset = 1 - noise ratio
 
 optimizer = torch.optim.SGD(model.parameters(), args.lr, momentum=args.momentum, weight_decay=args.decay, nesterov=args.nesterov)
-mt = MeanTeacher(model, ema_model, optimizer, args)
+mt = MeanTeacher(model, ema_model, optimizer, args) # mt training
 swa = Supervised(swa_model, optimizer, args) # no training
 fastswa = Supervised(fastswa_nets[0], optimizer, args) # no training
 num_snapshot = 0
 
-if args.lr_schedule == 'fastswa':
-    max_epoch = args.epochs + args.num_cycles * args.cycle_interval# + 1
-elif args.lr_schedule == 'cosineannealing':
-    max_epoch = args.interval * args.cycles
 
-for epoch in range(args.start_epoch, max_epoch):
+# start training
+for epoch in range(args.start_epoch, args.epochs + args.num_cycles * args.cycle_interval +1):
 
-    print('\nEpoch: %d/%d'%(epoch+1, args.epochs + args.num_cycles * args.cycle_interval))
+    # print('\nEpoch: %d/%d'%(epoch+1, args.epochs + args.num_cycles * args.cycle_interval))
     if epoch < args.epochs:
         print('In first cycle')
     else:
@@ -209,23 +206,19 @@ for epoch in range(args.start_epoch, max_epoch):
     else:
         accuracy['test_swa_acc'].append(None)
 
-    # filtering
+    # filtering step
     if args.epochs is not None and ((epoch >= args.epochs)) and ((epoch - args.epochs) % args.cycle_interval) == 0: # when new cycle start ( now model is the last model of previous cycle )
         print('Filtering..')
         f.labeled_idxs_history = labeled_idxs_history
         if args.filtering_type == 'snapshot_preds_ensemble':
             num_snapshot += 1
-            labeled_idxs = f.filter_(model, args.filtering_type, num_snapshot)
-        elif args.filtering_tpye == 'swa_model':
-            labeled_idxs = f.filter_(swa_model, args.filtering_type)
-        elif args.filtering_tpye == 'fastswa_model':
-            labeled_idxs = f.filter_(fastswa_nets[0], args.filtering_type)
+            labeled_idxs = f.filtering(model, args.filtering_type, num_snapshot)
         labeled_idxs_history = np.concatenate((labeled_idxs_history, labeled_idxs)) # update labeled samples' idxs
         unlabeled_idxs = np.setdiff1d(np.arange(len(trainset.targets)), labeled_idxs_history)  # update unlabeled samples' idxs
         rate_of_labeled = 100. * len(labeled_idxs_history) / len(trainset.targets)
         targets = trainloader.dataset.targets
         filtered_trainloader.dataset.targets = \
-            [-1 if i in unlabeled_idxs else targets[i] for i in range(len(targets))]
+            [-1 if i in unlabeled_idxs else targets[i] for i in range(len(targets))] # unlabeling
         filtered_trainloader = dataloader_filtering(filtered_trainloader, labeled_idxs_history, unlabeled_idxs, args)
 
         precision = 100. * len(set(clean_idxs_train) & set(labeled_idxs_history)) / len(labeled_idxs_history)
@@ -233,10 +226,10 @@ for epoch in range(args.start_epoch, max_epoch):
         print('Filtering Completed! The present dataset\'s Precision: %.3f Recall: %.3f' % (precision, recall))
         print('Labeled: %d\tUnlabeled: %d' % (len(labeled_idxs_history), len(unlabeled_idxs)))
 
-    if epoch == args.epochs + args.num_cycles * args.cycle_interval:
+    if epoch == args.epochs + args.num_cycles * args.cycle_interval: # total last epoch
         test_acc, test_ema_acc = mt.test(testloader)
-        swa_acc = swa.test(testloader, epoch)
-        fastswa_acc = fastswa.test(testloader, epoch)
+        swa_acc = swa.test(testloader)
+        fastswa_acc = fastswa.test(testloader)
         print('Training Completed!')
         print('Final Accuracy: [Student]Acc: %.3f%%  [Teacher]Acc: %.3f%%  [SWA]Acc: %.3f%%  [fastSWA]Acc: %.3f%%'
               %(test_acc, test_ema_acc, swa_acc, fastswa_acc))
@@ -251,7 +244,7 @@ for epoch in range(args.start_epoch, max_epoch):
         break
 
     train_loss, train_acc = mt.train(filtered_trainloader, epoch)
-    val_loss, val_ema_loss, val_acc, val_ema_acc = mt.validate(valloader, epoch)
+    val_loss, val_ema_loss, val_acc, val_ema_acc = mt.validate(valloader)
     test_acc, test_ema_acc = mt.test(testloader)
     accuracy['train_acc'].append(train_acc)
     accuracy['val_acc'].append(val_acc)

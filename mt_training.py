@@ -4,11 +4,8 @@ import numpy as np
 import pdb
 
 from mean_teacher import losses
-from train_utils import get_current_consistency_weight
-from train_utils import update_ema_variables
+from train_utils import get_current_consistency_weight, update_ema_variables, lr_fastswa
 from utils import progress_bar
-from lr_sceduler import lr_cosineannealing, lr_fastswa
-from sklearn.mixture import GaussianMixture
 
 class Supervised():
     def __init__(self, model, optimizer, args):
@@ -18,19 +15,15 @@ class Supervised():
         # train configuration
         self.batch_size = args.batch_size
         self.logit_distance_cost = args.logit_distance_cost
-        self.max_total_epochs = args.max_total_epochs
+        self.total_epochs = args.epochs + args.num_cycles * args.cycle_interval
 
-        self.lr_schedule = args.lr_schedule
-
-        self.best_acc = 0
         self.global_step = 0
 
-        self.wait = 0
-
     def train(self, trainloader, epoch):
-        # criterion
-        # print('\nEpoch: %d/%d'
-        #       % (epoch + 1, self.max_total_epochs))
+
+        print('\nEpoch: %d/%d'
+              % (epoch+1, self.total_epochs))
+
         class_criterion = nn.CrossEntropyLoss(reduction='sum', ignore_index=-1)
         residual_logit_criterion = losses.symmetric_mse_loss
 
@@ -44,10 +37,7 @@ class Supervised():
 
         for batch_idx, ((inputs1, _), targets) in enumerate(trainloader):
 
-            if self.lr_schedule == 'fastswa':
-                lr_fastswa(self.optimizer, epoch, batch_idx, len(trainloader))
-            elif self.lr_schedule == 'cosineannealing':
-                lr_cosineannealing(self.optimizer, epoch, batch_idx, len(trainloader))
+            lr_fastswa(self.optimizer, epoch, batch_idx, len(trainloader))
 
             inputs1, targets = inputs1.cuda(), targets.cuda()
             outputs = self.model(inputs1)
@@ -80,7 +70,6 @@ class Supervised():
 
             progress_bar(batch_idx, len(trainloader),
                          'Loss: %.3f | ClassLoss = %.3f | LesLoss: %.3f | Acc: %.3f%% (%d/%d) | lr: %.6f'
-                         # 'Loss: %.3f | ClassLoss = %.3f | LesLoss: %.3f | clean Acc: %.3f%% (%d/%d) | noisy Acc: %.3f%%(%d/%d)| lr: %.6f'
                          % (running_loss / (batch_idx + 1),
                             running_class_loss / (batch_idx + 1),
                             running_res_loss / (batch_idx + 1),
@@ -94,7 +83,7 @@ class Supervised():
 
         return loss['loss'], train_acc #, clean_acc, noisy_acc
 
-    def validate(self, valloader, epoch):
+    def validate(self, valloader):
         self.model.eval()
 
         running_class_loss = 0
@@ -145,21 +134,23 @@ class MeanTeacher():
         self.model = model
         self.ema_model = ema_model
         self.optimizer = optimizer
+
         # train configuration
         self.batch_size = args.batch_size
         self.labeled_batch_size = args.labeled_batch_size
         self.logit_distance_cost = args.logit_distance_cost
         self.consistency_type = args.consistency_type
         self.ema_decay = args.ema_decay
-        self.lr_schedule = args.lr_schedule
-        # self.max_total_epochs = args.max_total_epochs
-        # self.max_epochs_per_filtering = args.max_epochs_per_filtering
+        self.total_epochs = args.epochs + args.num_cycles * args.cycle_interval
 
-        self.best_ema_acc = 0
+        self.args = args
         self.global_step = 0
-        self.wait = 0
 
     def train(self, trainloader, epoch):
+
+        print('\nEpoch: %d/%d'
+              % (epoch+1, self.total_epochs))
+
         class_criterion = nn.CrossEntropyLoss(reduction='sum', ignore_index=-1)
         if self.consistency_type == 'mse':
             consistency_criterion = losses.softmax_mse_loss
@@ -181,10 +172,7 @@ class MeanTeacher():
 
         for batch_idx, ((inputs, ema_inputs), targets) in enumerate(trainloader):
 
-            if self.lr_schedule == 'fastswa':
-                lr_fastswa(self.optimizer, epoch, batch_idx, len(trainloader))
-            elif self.lr_schedule == 'cosineannealing':
-                lr_cosineannealing(self.optimizer, epoch, batch_idx, len(trainloader))
+            lr_fastswa(self.optimizer, epoch, batch_idx, len(trainloader))
 
             inputs, ema_inputs, targets = inputs.cuda(), ema_inputs.cuda(), targets.cuda()
             outputs = self.model(inputs)
@@ -229,6 +217,7 @@ class MeanTeacher():
                             running_res_loss/(batch_idx+1),
                             100.*correct/total, correct, total,
                             self.optimizer.param_groups[-1]['lr']))
+
         loss = {'loss': running_loss / (batch_idx+1),
                 'class_loss': running_class_loss / (batch_idx+1),
                 'consistency_loss': running_consistency_loss / (batch_idx+1),
@@ -237,7 +226,7 @@ class MeanTeacher():
 
         return loss['loss'], acc
 
-    def validate(self, valloader, epoch):
+    def validate(self, valloader):
         self.model.eval()
         self.ema_model.eval()
 
@@ -271,11 +260,7 @@ class MeanTeacher():
                                 100.*ema_correct/total, ema_correct, total))
         acc = 100. * correct / total
         ema_acc = 100. * ema_correct / total
-        if ema_acc >= self.best_ema_acc: # update ema_best_acc & init the 'wait' epochs
-            self.best_ema_acc = ema_acc
-            self.wait = 0
-        else:
-            self.wait += 1
+
         loss = running_class_loss/(batch_idx+1)
         ema_loss = running_ema_class_loss/(batch_idx+1)
 
@@ -319,25 +304,22 @@ class Filter():
         self.noisy_labels = np.array(noisy_labels[0])
         self.labeled_idxs_history = np.array([], dtype=int)
 
-    def filter(self, filtering_model, filtering = False):
-        softmax, loss = self._get_softmax(filtering_model, self.trainloader)
+    # get behavior of samples (softmax, loss, ...)
+    def get_behavior(self, model):
+        softmax, loss = self._get_softmax(model, self.trainloader)
         if self.softmax_ema.shape[0] == 1:
             self.softmax_ema = softmax
         else:
-            self.softmax_ema = self.ema_decay * self.softmax_ema + (1 - self.ema_decay) * softmax
+            self.softmax_ema = self.ema_decay * self.softmax_ema + (1 - self.ema_decay) * softmax # used for SELF
         pred_ensemble = np.argmax(self.softmax_ema, 1)
 
-        if not filtering:
-            return softmax, loss
-        else:
-            if_agree = (pred_ensemble == self.trainset.targets)
-            labeled_idxs = list(np.where(if_agree)[0])
-            unlabeled_idxs = list(set(range(len(self.trainset.targets))) - set(labeled_idxs))
-            return labeled_idxs, unlabeled_idxs #, softmax, self.softmax_ema, loss
+        return softmax, self.softmax_ema, loss
 
-    def filter_(self, model, filtering_type, num_snapshot=0,):
 
-        # get outputs of (last)model
+    # filter unlabeled set and get additional labeled set from unlabeled set
+    def filtering(self, model, filtering_type, num_snapshot=0):
+
+        # get outputs of filtering model
         with torch.no_grad():  ##
             class_criterion = nn.CrossEntropyLoss(reduction='none')
             for batch_idx, (inputs, targets) in enumerate(self.trainloader):
@@ -351,7 +333,7 @@ class Filter():
                     logits = np.concatenate((logits, outputs.cpu().numpy()), axis=0)
                     loss = np.concatenate((loss, class_loss.cpu().numpy()), axis=0)
 
-            softmax = self._logit_to_softmax(logits)
+            softmax = self._logit_to_softmax(logits) # model output prob.
 
             if filtering_type == 'snapshot_preds_ensemble':
                 if num_snapshot == 1:
