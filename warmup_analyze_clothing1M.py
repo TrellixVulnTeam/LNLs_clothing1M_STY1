@@ -110,7 +110,6 @@ data_dict = {#'filtered_trainloader':filtered_trainloader,
 
 print('==> Building model..')
 model_factory = architectures.__dict__[args.arch]
-import pdb; pdb.set_trace()
 model = model_factory(pretrained=True,num_classes=14)
 
 model = nn.DataParallel(model).cuda()
