@@ -9,3 +9,4 @@ from .mobilenet import *
 from .densenet3 import DenseNet190
 from .cifar_shakeshake26 import *
 # from .cifar_shakeshake26_emb import *
+from .resnet_clothing1M import *

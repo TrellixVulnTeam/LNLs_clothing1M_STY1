@@ -3,8 +3,9 @@ import argparse
 
 parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
 parser.add_argument('--num-classes', default=None, type=int, help='number of classes')
-parser.add_argument('--dataset', default='cifar10', choices=['cifar10', 'cifar100', 'clothes1M', 'webvision'], help='choose dataset')
+parser.add_argument('--dataset', default='cifar10', choices=['cifar10', 'cifar100', 'clothing1M', 'webvision'], help='choose dataset')
 parser.add_argument('--val-size', default=5000, type=int, help='size of validation set')
+parser.add_argument('--train-size', default=1000000, type=int, help='size of validation set')
 parser.add_argument('--arch', default="cifar_shakeshake26", type=str, help='model architecture')
 parser.add_argument('--seed', default=1, type=int, help='random seed')
 parser.add_argument('-j', '--workers', default=4, type=int, help='number of data loading workers (default: 4)')
@@ -26,7 +27,7 @@ parser.add_argument('--noise-ratio', default=0.4, type=float, help='ratio of noi
 parser.add_argument('--noisy-validation', default=True, type=bool, help='clean validation or noisy validation set')
 
 # lr scheduling
-parser.add_argument('--lr-type', default='cosineannealing', type=str, choices=['fastswa', 'cosineannealing'], help='learning rate schedule type')
+parser.add_argument('--lr-type', default='cosineannealing', type=str, choices=['fastswa', 'cosineannealing','lr_clothing1M'], help='learning rate schedule type')
 parser.add_argument('--lr', default=0.05, type=float, help='max learning rate')
 parser.add_argument('--lr-min', default=0.0, type=float, help='min learning rate')
 parser.add_argument('--initial-lr', default=0.0, type=float, help='initial learning rate when using linear rampup')
