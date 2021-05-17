@@ -336,12 +336,13 @@ while epoch < args.max_total_epoch: # 300
     accuracy['test_acc'].append(test_acc)
     accuracy['test_ema_acc'].append(test_ema_acc)
 
+    epoch += 1
     if (epoch - args.warmup_epoch) % args.lr_interval_ssl == 0:
         prediction_set_s.append(dict_student['softmax'])
         prediction_set_t.append(dict_teacher['softmax'])
     accuracy, dict_analysis = logging_dict(accuracy, dict_analysis, dict_student, dict_teacher)
     plotting(epoch, accuracy, dict_analysis['lr'], path_plot)
-    epoch += 1
+    
 
     # log
     with open(path_log, 'a') as logfile:
