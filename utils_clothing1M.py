@@ -128,8 +128,6 @@ def plotting(epoch, accuracy, lr, path_plot):
              color='green', label='Test_Student_Acc')
     ax1.plot(range(epoch), accuracy['test_ema_acc'],
              color='green', label='Test_Teacher_Acc', linestyle=':')
-    plt.plot(range(epoch), accuracy['precision'],
-             color='saddlebrown', label='Precision', linestyle='--')
     ax1.legend(loc='upper left')
     ax1.grid(True)
 
