@@ -1,19 +1,22 @@
+
 from copy import deepcopy
 from pathlib import Path
 
 import torchvision.datasets as datasets
 import torchvision.transforms as transforms
 from sklearn.model_selection import train_test_split
-
 from mean_teacher import data
 import torch
 import random
+from data import cifar
 from torch.utils.data import Dataset, DataLoader
+from mean_teacher import data
 from PIL import Image
 
 p = Path(__file__).absolute()
 PATH = p.parents[1]
 DATA_PATH = PATH / 'data'
+
 
 class clothing_dataset(Dataset): 
     def __init__(self, root, transform, mode, num_samples=0, pred=[], probability=[], paths=[], num_class=14): 
@@ -23,7 +26,9 @@ class clothing_dataset(Dataset):
         self.mode = mode
         self.train_labels = {}
         self.test_labels = {}
-        self.val_labels = {}            
+        self.val_labels = {}    
+        self.targets = []
+
         
         with open('%s/noisy_label_kv.txt'%self.root,'r') as f:
             lines = f.read().splitlines()
@@ -51,6 +56,7 @@ class clothing_dataset(Dataset):
             for impath in train_imgs:
                 label = self.train_labels[impath]   # dictionary
                 if class_num[label]<(num_samples/14) and len(self.train_imgs)<num_samples: #64000 개의 train_imgs를 확보 대신 class당 4571개씩 balanced하게
+                    self.targets.append(label)
                     self.train_imgs.append(impath)
                     class_num[label]+=1
             random.shuffle(self.train_imgs)       
@@ -101,20 +107,21 @@ class clothing_dataset(Dataset):
             img_path = self.train_imgs[index]
             target = self.train_labels[img_path]     
             image = Image.open(img_path).convert('RGB')   
-            img = self.transform(image)
-            return img, target, index        
+            img1 = self.transform(image)
+            img2 = self.transform(image)
+            return (img1,img2), target, index        
         elif self.mode=='test':
             img_path = self.test_imgs[index]
             target = self.test_labels[img_path]     
             image = Image.open(img_path).convert('RGB')   
             img = self.transform(image) 
-            return img, target
+            return img, target,index
         elif self.mode=='val':
             img_path = self.val_imgs[index]
             target = self.test_labels[img_path]     
             image = Image.open(img_path).convert('RGB')   
             img = self.transform(image) 
-            return img, target    
+            return img, target,index    
         
     def __len__(self):
         if self.mode=='test':
@@ -139,15 +146,14 @@ def clothing1M(final_run, train_size):
             transforms.ToTensor(),
             transforms.Normalize((0.6959, 0.6537, 0.6371),(0.3113, 0.3192, 0.3214)),
         ])        
-    trainset = clothing_dataset('./clothing1M/data',transform=transform_train,mode='all',num_samples=train_size)
-    valset = clothing_dataset('./clothing1M/data',transform=transform_test, mode='val')
-    testset = clothing_dataset('./clothing1M/data',transform=transform_test, mode='test')
+    trainset = clothing_dataset('../data/clothing1M/data',transform=transform_train,mode='all',num_samples=train_size)
+    valset = clothing_dataset('../data/clothing1M/data',transform=transform_test, mode='val')
+    testset = clothing_dataset('../data/clothing1M/data',transform=transform_test, mode='test')
     
 
 
     return trainset, valset, testset, num_classes
  
-
 
 def cifar10(final_run, val_size=5000):
     num_classes = 10
@@ -163,9 +169,9 @@ def cifar10(final_run, val_size=5000):
         transforms.ToTensor(),
         transforms.Normalize(**channel_stats)
     ])
-    trainset = datasets.CIFAR10(root=DATA_PATH, train=True, download=True,
+    trainset = cifar.CIFAR10(root=DATA_PATH, train=True, download=True,
                                 transform=transform_train)
-    testset = datasets.CIFAR10(root=DATA_PATH, train=False, download=True,
+    testset = cifar.CIFAR10(root=DATA_PATH, train=False, download=True,
                                transform=transform_test)
     if final_run:
         return trainset, testset, testset, num_classes
@@ -194,9 +200,9 @@ def cifar100(final_run, val_size=5000):
         transforms.ToTensor(),
         transforms.Normalize(**channel_stats)
     ])
-    trainset = datasets.CIFAR100(root=DATA_PATH, train=True, download=True,
+    trainset = cifar.CIFAR100(root=DATA_PATH, train=True, download=True,
                                  transform=transform_train)
-    testset = datasets.CIFAR100(root=DATA_PATH, train=False, download=True,
+    testset = cifar.CIFAR100(root=DATA_PATH, train=False, download=True,
                                 transform=transform_test)
     if final_run:
         return trainset, testset, testset, num_classes

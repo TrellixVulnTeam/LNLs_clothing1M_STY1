@@ -6,9 +6,6 @@ from email.mime.text import MIMEText
 from copy import deepcopy
 import matplotlib.pyplot as plt
 
-
-# _, term_width = os.popen('stty size', 'r').read().split()
-# term_width = int(term_width)
 term_width = 80
 
 TOTAL_BAR_LENGTH = 25.
@@ -108,24 +105,9 @@ def send_email(message):
 def logging_dict(accuracy, analysis_dict, dict_student, dict_teacher):
 
     accuracy['train_acc'].append(dict_student['train_acc'])
-    # accuracy['clean_acc'].append(dict_student['clean_acc'])
-    # accuracy['noisy_acc'].append(dict_student['noisy_acc'])
-    # accuracy['noisy_memorized'].append(dict_student['noisy_memorized'])
     accuracy['train_acc_t'].append(dict_teacher['train_acc'])
-    # accuracy['clean_acc_t'].append(dict_teacher['clean_acc'])
-    # accuracy['noisy_acc_t'].append(dict_teacher['noisy_acc'])
-    # accuracy['noisy_memorized_t'].append(dict_teacher['noisy_memorized'])
-
     analysis_dict['softmax'].append(deepcopy(dict_student['softmax']))
-    # analysis_dict['softmax_ema'].append(deepcopy(dict_student['softmax_ema']))
-    # analysis_dict['loss_history'].append(deepcopy(dict_student['loss']))
     analysis_dict['softmax_t'].append(deepcopy(dict_teacher['softmax']))
-    # analysis_dict['t_softmax_ema'].append(deepcopy(dict_teacher['softmax_ema']))
-    # analysis_dict['loss_history_t'].append(deepcopy(dict_teacher['loss']))
-
-    # if len(dict_student['consistency_loss']) != 0:
-    #     analysis_dict['consistency_loss'].append(dict_student['consistency_loss'])
-
     return accuracy, analysis_dict
 
 
@@ -136,7 +118,6 @@ def plotting(epoch, accuracy, lr, path_plot):
     fig, ax1 = plt.subplots()
     ax1.set_xlabel('Epoch')
     ax1.set_ylabel('Accuracy')
-    import pdb;pdb.set_trace()
     ax1.plot(range(epoch), accuracy['train_acc'],
              color='blue', label='Train_Acc')
     ax1.plot(range(epoch), accuracy['val_acc'],
@@ -147,18 +128,6 @@ def plotting(epoch, accuracy, lr, path_plot):
              color='green', label='Test_Student_Acc')
     ax1.plot(range(epoch), accuracy['test_ema_acc'],
              color='green', label='Test_Teacher_Acc', linestyle=':')
-    # ax1.plot(range(epoch), accuracy['clean_acc'],
-    #          color='midnightblue', label='clean_acc')
-    # ax1.plot(range(epoch), accuracy['clean_acc_t'],
-    #          color='midnightblue', label='clean_acc_t', linestyle=':')
-    # ax1.plot(range(epoch), accuracy['noisy_acc'],
-    #          color='cornflowerblue', label='noisy_acc')
-    # ax1.plot(range(epoch), accuracy['noisy_acc_t'],
-    #          color='cornflowerblue', label='noisy_acc_t', linestyle=':')
-    # ax1.plot(range(epoch), accuracy['noisy_memorized'],
-    #          color='darkred', label='Noisy_Memorized')
-    # ax1.plot(range(epoch), accuracy['noisy_memorized_t'],
-    #          color='darkred', label='noisy_memorized_t', linestyle=':')
     plt.plot(range(epoch), accuracy['precision'],
              color='saddlebrown', label='Precision', linestyle='--')
     ax1.legend(loc='upper left')

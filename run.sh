@@ -15,4 +15,3 @@ do
         --arch resnet50     #resnet_clothing1M에서 불러옴
     
 done
-python3 alarm.py
